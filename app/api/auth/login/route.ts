@@ -33,18 +33,11 @@ export async function POST(request: NextRequest) {
         role: user.role 
       },
       JWT_SECRET,
-      { expiresIn: '1d' }
+      { expiresIn: '24h' }
     );
 
-    // Set cookie
-    cookies().set('auth-token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 86400 // 1 day
-    });
-
-    return NextResponse.json({
+    // Create response
+    const response = NextResponse.json({
       success: true,
       user: {
         username: user.username,
@@ -53,6 +46,16 @@ export async function POST(request: NextRequest) {
         role: user.role
       }
     });
+
+    // Set cookie
+    response.cookies.set('auth-token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 86400 // 24 hours
+    });
+
+    return response;
   } catch (error) {
     console.error('Login error:', error);
     return NextResponse.json({ error: 'An error occurred during login' }, { status: 500 });

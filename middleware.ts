@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { getToken } from 'next-auth/jwt'
+import { cookies } from 'next/headers'
+import { verify } from 'jsonwebtoken'
+
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 export async function middleware(request: NextRequest) {
   // Get the pathname of the request
@@ -8,14 +11,24 @@ export async function middleware(request: NextRequest) {
 
   // If it's an API route that starts with /api/admin, check for authentication
   if (path.startsWith('/api/admin')) {
-    const session = await getToken({ 
-      req: request, 
-      secret: process.env.NEXTAUTH_SECRET 
-    })
+    const token = request.cookies.get('auth-token')?.value
 
-    if (!session) {
+    if (!token) {
       return new NextResponse(
         JSON.stringify({ error: 'Unauthorized' }),
+        { 
+          status: 401,
+          headers: { 'content-type': 'application/json' }
+        }
+      )
+    }
+
+    try {
+      verify(token, JWT_SECRET)
+      return NextResponse.next()
+    } catch (error) {
+      return new NextResponse(
+        JSON.stringify({ error: 'Invalid token' }),
         { 
           status: 401,
           headers: { 'content-type': 'application/json' }
