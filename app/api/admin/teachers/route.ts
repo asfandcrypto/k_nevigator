@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { ObjectId } from 'mongodb';
 import clientPromise from '@/lib/mongodb';
 
 export async function GET() {
@@ -58,5 +59,72 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error adding teacher:', error);
     return NextResponse.json({ error: 'Failed to add teacher' }, { status: 500 });
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    const client = await clientPromise;
+    const db = client.db();
+    const data = await request.json();
+
+    if (!data._id) {
+      return NextResponse.json({ error: 'Teacher ID is required' }, { status: 400 });
+    }
+
+    // Ensure subjects is an array
+    if (!Array.isArray(data.subjects)) {
+      data.subjects = [data.subjects];
+    }
+
+    const result = await db.collection('teachers').updateOne(
+      { _id: new ObjectId(data._id) },
+      { 
+        $set: {
+          ...data,
+          updatedAt: new Date()
+        }
+      }
+    );
+
+    if (result.matchedCount === 0) {
+      return NextResponse.json({ error: 'Teacher not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({ 
+      success: true,
+      message: 'Teacher updated successfully' 
+    });
+  } catch (error) {
+    console.error('Error updating teacher:', error);
+    return NextResponse.json({ error: 'Failed to update teacher' }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json({ error: 'Teacher ID is required' }, { status: 400 });
+    }
+
+    const client = await clientPromise;
+    const db = client.db();
+
+    const result = await db.collection('teachers').deleteOne({ _id: new ObjectId(id) });
+
+    if (result.deletedCount === 0) {
+      return NextResponse.json({ error: 'Teacher not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({ 
+      success: true,
+      message: 'Teacher deleted successfully' 
+    });
+  } catch (error) {
+    console.error('Error deleting teacher:', error);
+    return NextResponse.json({ error: 'Failed to delete teacher' }, { status: 500 });
   }
 }
