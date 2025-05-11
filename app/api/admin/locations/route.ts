@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ObjectId } from 'mongodb';
 import clientPromise from '@/lib/mongodb';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
 
 export async function GET() {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const client = await clientPromise;
     const db = client.db();
     const locations = await db.collection('locations').find({}).toArray();
@@ -16,6 +23,11 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const client = await clientPromise;
     const db = client.db();
     const data = await request.json();
@@ -29,21 +41,6 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
-    }
-    
-    // Additional validation based on location type
-    if (data.type === 'classroom' || data.type === 'lab') {
-      if (!data.capacity) {
-        return NextResponse.json(
-          { error: 'Capacity is required for classrooms and labs' },
-          { status: 400 }
-        );
-      }
-    } else if (data.type === 'office' && !data.occupant) {
-      return NextResponse.json(
-        { error: 'Occupant is required for offices' },
-        { status: 400 }
-      );
     }
     
     // Insert location into MongoDB
@@ -69,6 +66,11 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const client = await clientPromise;
     const db = client.db();
     const data = await request.json();
@@ -103,6 +105,11 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
