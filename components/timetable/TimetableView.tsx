@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Tabs, 
   TabsContent, 
@@ -14,26 +14,66 @@ import { Clock, MapPin, User, BookOpen, Info } from 'lucide-react';
 
 const TimetableView = () => {
   const [view, setView] = useState<'list' | 'grid'>('list');
+  const [timetableData, setTimetableData] = useState([]);
   
-  const getClassTypeBadge = (type: string) => {
-    switch (type.toLowerCase()) {
-      case 'lecture':
-        return <Badge variant="outline" className="border-blue-300 text-blue-700 dark:border-blue-700 dark:text-blue-400">Lecture</Badge>;
-      case 'lab':
-        return <Badge variant="outline" className="border-green-300 text-green-700 dark:border-green-700 dark:text-green-400">Lab</Badge>;
-      case 'tutorial':
-        return <Badge variant="outline" className="border-purple-300 text-purple-700 dark:border-purple-700 dark:text-purple-400">Tutorial</Badge>;
-      default:
-        return <Badge variant="outline">Other</Badge>;
+  useEffect(() => {
+    fetchTimetable();
+  }, []);
+
+  const fetchTimetable = async () => {
+    try {
+      const response = await fetch('/api/timetable');
+      if (response.ok) {
+        const data = await response.json();
+        setTimetableData(data);
+      }
+    } catch (error) {
+      console.error('Error fetching timetable:', error);
     }
   };
 
-  const getSemesterBadge = (semester: number) => {
-    return (
-      <Badge variant="secondary" className="ml-2">
-        Semester {semester}
-      </Badge>
-    );
+  const getDayClasses = (day: string) => {
+    return timetableData.filter(item => item.day.toLowerCase() === day.toLowerCase());
+  };
+
+  const renderClasses = (classes) => {
+    if (classes.length === 0) {
+      return (
+        <div className="text-center text-gray-500 dark:text-gray-400 py-8">
+          No classes scheduled
+        </div>
+      );
+    }
+
+    return classes.map((classItem) => (
+      <Card key={classItem._id} className="p-4 mb-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <h4 className="text-lg font-semibold">{classItem.course}</h4>
+              <Badge variant="outline">{classItem.title}</Badge>
+            </div>
+            
+            <div className="flex flex-col md:flex-row gap-4 text-sm text-gray-600 dark:text-gray-300">
+              <div className="flex items-center">
+                <Clock className="h-4 w-4 mr-2" />
+                {classItem.time}
+              </div>
+              <div className="flex items-center">
+                <MapPin className="h-4 w-4 mr-2" />
+                {classItem.room}
+              </div>
+              <div className="flex items-center">
+                <User className="h-4 w-4 mr-2" />
+                {classItem.teacher}
+              </div>
+            </div>
+          </div>
+          
+          <Badge>Semester {classItem.semester}</Badge>
+        </div>
+      </Card>
+    ));
   };
 
   return (
@@ -69,11 +109,7 @@ const TimetableView = () => {
 
         {['monday', 'tuesday', 'wednesday', 'thursday', 'friday'].map((day) => (
           <TabsContent key={day} value={day} className="space-y-4">
-            <Card className="p-4">
-              <div className="text-center text-gray-500 dark:text-gray-400 py-8">
-                No classes scheduled for {day.charAt(0).toUpperCase() + day.slice(1)}
-              </div>
-            </Card>
+            {renderClasses(getDayClasses(day))}
           </TabsContent>
         ))}
       </Tabs>

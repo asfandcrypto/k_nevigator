@@ -1,16 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
 import { ObjectId } from 'mongodb';
 import clientPromise from '@/lib/mongodb';
-import { authOptions } from '@/lib/auth';
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const client = await clientPromise;
     const db = client.db();
     const locations = await db.collection('locations').find({}).toArray();
@@ -23,15 +16,10 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const client = await clientPromise;
     const db = client.db();
     const data = await request.json();
-
+    
     // Validate required fields
     const requiredFields = ['name', 'building', 'floor', 'type'];
     for (const field of requiredFields) {
@@ -42,7 +30,7 @@ export async function POST(request: NextRequest) {
         );
       }
     }
-
+    
     // Additional validation based on location type
     if (data.type === 'classroom' || data.type === 'lab') {
       if (!data.capacity) {
@@ -57,31 +45,30 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
+    
+    // Insert location into MongoDB
     const result = await db.collection('locations').insertOne({
       ...data,
       createdAt: new Date(),
       updatedAt: new Date()
     });
-
+    
     return NextResponse.json({ 
       success: true, 
       id: result.insertedId,
-      message: 'Location added successfully' 
+      message: 'Location created successfully' 
     });
   } catch (error) {
-    console.error('Error adding location:', error);
-    return NextResponse.json({ error: 'Failed to add location' }, { status: 500 });
+    console.error('Error creating location:', error);
+    return NextResponse.json(
+      { error: 'Failed to create location' },
+      { status: 500 }
+    );
   }
 }
 
 export async function PUT(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const client = await clientPromise;
     const db = client.db();
     const data = await request.json();
@@ -116,11 +103,6 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
