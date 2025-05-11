@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import clientPromise from '@/lib/mongodb';
-import { cookies } from 'next/headers';
 import { sign } from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
@@ -36,14 +35,21 @@ export async function POST(request: NextRequest) {
       { expiresIn: '24h' }
     );
 
-    // Create response
+    // Create response with CORS headers
     const response = NextResponse.json({
       success: true,
+      token,
       user: {
         username: user.username,
         name: user.name,
         email: user.email,
         role: user.role
+      }
+    }, {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization'
       }
     });
 
@@ -51,7 +57,7 @@ export async function POST(request: NextRequest) {
     response.cookies.set('auth-token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: 'lax',
       maxAge: 86400 // 24 hours
     });
 
